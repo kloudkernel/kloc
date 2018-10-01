@@ -38,8 +38,9 @@ impl Heap {
             heap_size >= MIN_HEAP_SIZE,
             "heap_size must be at least equal to MIN_SLAB_SIZE"
         );
-        
-            heap_size & MIN_HEAP_SIZE,
+
+        assert!(
+            heap_size % MIN_HEAP_SIZE == 0,
             "heap_size must be a multple of MIN_HEAP_SIZE"
         );
 
