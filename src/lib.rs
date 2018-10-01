@@ -5,7 +5,6 @@
 extern crate alloc;
 extern crate linked_list_allocator;
 extern crate spin;
-extern crate std;
 
 mod slab;
 
