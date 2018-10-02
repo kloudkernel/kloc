@@ -4,58 +4,42 @@
 
 extern crate alloc;
 extern crate linked_list_allocator;
-extern crate spin;
 
-mod slab;
+use alloc::alloc::{Alloc, GlobalAlloc, Layout};
+use alloc::prelude::ToString;
+use linked_list_allocator::LockedHeap;
 
-use slab::Slab;
-
-pub const MIN_SLAB_SIZE: usize = 4096;
-pub const PAGE_SIZE: usize = MIN_SLAB_SIZE;
-pub const NUM_OF_SLABS: usize = 8;
-pub const MIN_HEAP_SIZE: usize = NUM_OF_SLABS * MIN_SLAB_SIZE;
-
-pub struct Heap {
-    slab_64_bytes: Slab,
-    slab_128_bytes: Slab,
-    slab_256_bytes: Slab,
-    slab_512_bytes: Slab,
-    slab_1024_bytes: Slab,
-    slab_2048_bytes: Slab,
-    slab_4096_bytes: Slab,
-    linked_list_allocator: linked_list_allocator::Heap,
+struct Allocator {
+    inner: LockedHeap,
 }
 
-impl Heap {
-    pub unsafe fn new(heap_start_addr: usize, heap_size: usize) -> Heap {
-        assert!(
-            heap_start_addr % PAGE_SIZE == 0,
-            "heap_start_addr must be page aligned"
-        );
+impl Allocator {
+    pub unsafe fn init(&mut self, heap_start: usize, heap_end: usize) {
+        let heap_size = heap_end - heap_start;
+        self.inner.lock().init(heap_start, heap_size);
+    }
+}
 
-        assert!(
-            heap_size >= MIN_HEAP_SIZE,
-            "heap_size must be at least equal to MIN_SLAB_SIZE"
-        );
-
-        assert!(
-            heap_size % MIN_HEAP_SIZE == 0,
-            "heap_size must be a multple of MIN_HEAP_SIZE"
-        );
-
-        let slab_size = heap_size / NUM_OF_SLABS;
-        Heap {
-            slab_64_bytes: Slab::new(heap_start_addr, slab_size, 64),
-            slab_128_bytes: Slab::new(heap_start_addr + slab_size, slab_size, 128),
-            slab_256_bytes: Slab::new(heap_start_addr + 2 * slab_size, slab_size, 256),
-            slab_512_bytes: Slab::new(heap_start_addr + 3 * slab_size, slab_size, 512),
-            slab_1024_bytes: Slab::new(heap_start_addr + 4 * slab_size, slab_size, 1024),
-            slab_2048_bytes: Slab::new(heap_start_addr + 5 * slab_size, slab_size, 2048),
-            slab_4096_bytes: Slab::new(heap_start_addr + 6 * slab_size, slab_size, 4096),
-            linked_list_allocator: linked_list_allocator::Heap::new(
-                heap_start_addr + 7 * slab_size,
-                slab_size,
+unsafe impl GlobalAlloc for Allocator {
+    unsafe fn alloc(&self, _layout: Layout) -> *mut u8 {
+        match self.inner.lock().alloc(_layout) {
+            Ok(ptr) => ptr.as_ptr(),
+            Err(e) => panic!(
+                "failed to alloc memory for {:#?}: {}",
+                _layout,
+                e.to_string()
             ),
         }
     }
+    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
+        return self
+            .inner
+            .lock()
+            .dealloc(core::ptr::NonNull::<u8>::new_unchecked(_ptr), _layout);
+    }
 }
+
+#[global_allocator]
+static A: Allocator = Allocator {
+    inner: LockedHeap::empty(),
+};
