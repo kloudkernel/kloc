@@ -14,8 +14,7 @@ struct Allocator {
 }
 
 impl Allocator {
-    pub unsafe fn init(&mut self, heap_start: usize, heap_end: usize) {
-        let heap_size = heap_end - heap_start;
+    pub unsafe fn init(&mut self, heap_start: usize, heap_size: usize) {
         self.inner.lock().init(heap_start, heap_size);
     }
 }
@@ -44,8 +43,8 @@ static mut A: Allocator = Allocator {
     inner: LockedHeap::empty(),
 };
 
-pub unsafe fn init(heap_start: usize, heap_end: usize) {
-    A.init(heap_start, heap_end);
+pub unsafe fn init(heap_start: usize, heap_size: usize) {
+    A.init(heap_start, heap_size);
 }
 
 #[alloc_error_handler]
