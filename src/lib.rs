@@ -1,4 +1,4 @@
-#![feature(alloc, allocator_api)]
+#![feature(alloc, allocator_api, alloc_error_handler)]
 #![feature(const_fn)]
 #![no_std]
 
@@ -44,6 +44,11 @@ static mut A: Allocator = Allocator {
     inner: LockedHeap::empty(),
 };
 
-pub  unsafe fn init(heap_start: usize, heap_end: usize) {
+pub unsafe fn init(heap_start: usize, heap_end: usize) {
     A.init(heap_start, heap_end);
+}
+
+#[alloc_error_handler]
+fn alloc_error(_layout: Layout) -> ! {
+    panic!("failed to alloc memory for {:#?}", _layout);
 }
