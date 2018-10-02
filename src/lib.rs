@@ -44,6 +44,6 @@ static mut A: Allocator = Allocator {
     inner: LockedHeap::empty(),
 };
 
-unsafe fn init(heap_start: usize, heap_end: usize) {
+pub  unsafe fn init(heap_start: usize, heap_end: usize) {
     A.init(heap_start, heap_end);
 }
