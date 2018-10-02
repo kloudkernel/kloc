@@ -39,7 +39,3 @@ unsafe impl GlobalAlloc for Allocator {
     }
 }
 
-#[global_allocator]
-static A: Allocator = Allocator {
-    inner: LockedHeap::empty(),
-};
